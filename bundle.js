@@ -22361,7 +22361,7 @@
 /* 188 */
 /***/ function(module, exports, __webpack_require__) {
 
-	"use strict";
+	'use strict';
 	
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
@@ -22371,12 +22371,27 @@
 	
 	var _note_reducer2 = _interopRequireDefault(_note_reducer);
 	
+	var _track_reducer = __webpack_require__(207);
+	
+	var _track_reducer2 = _interopRequireDefault(_track_reducer);
+	
+	var _is_recording_reducer = __webpack_require__(208);
+	
+	var _is_recording_reducer2 = _interopRequireDefault(_is_recording_reducer);
+	
+	var _is_playing_reducer = __webpack_require__(212);
+	
+	var _is_playing_reducer2 = _interopRequireDefault(_is_playing_reducer);
+	
 	var _redux = __webpack_require__(174);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var RootReducer = (0, _redux.combineReducers)({
-	  notes: _note_reducer2.default
+	  notes: _note_reducer2.default,
+	  tracks: _track_reducer2.default,
+	  isRecording: _is_recording_reducer2.default,
+	  isPlaying: _is_playing_reducer2.default
 	});
 	
 	exports.default = RootReducer;
@@ -22416,6 +22431,9 @@
 	      }
 	      return state;
 	
+	    case _note_actions.NoteConstants.GROUP_UPDATE:
+	      return action.notes;
+	
 	    default:
 	      return state;
 	  }
@@ -22441,7 +22459,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.keyReleased = exports.keyPressed = exports.NoteConstants = undefined;
+	exports.groupUpdate = exports.keyReleased = exports.keyPressed = exports.NoteConstants = undefined;
 	
 	var _tones = __webpack_require__(191);
 	
@@ -22451,7 +22469,8 @@
 	
 	var NoteConstants = exports.NoteConstants = {
 	  KEY_PRESSED: "KEY_PRESSED",
-	  KEY_RELEASED: "KEY_RELEASED"
+	  KEY_RELEASED: "KEY_RELEASED",
+	  GROUP_UPDATE: "GROUP_UPDATE"
 	};
 	
 	var keyPressed = exports.keyPressed = function keyPressed(key) {
@@ -22465,6 +22484,13 @@
 	  return {
 	    type: NoteConstants.KEY_RELEASED,
 	    key: key
+	  };
+	};
+	
+	var groupUpdate = exports.groupUpdate = function groupUpdate(notes) {
+	  return {
+	    type: NoteConstants.GROUP_UPDATE,
+	    notes: notes
 	  };
 	};
 
@@ -22536,10 +22562,24 @@
 	
 	var _synth_container2 = _interopRequireDefault(_synth_container);
 	
+	var _recorder_container = __webpack_require__(210);
+	
+	var _recorder_container2 = _interopRequireDefault(_recorder_container);
+	
+	var _jukebox_container = __webpack_require__(214);
+	
+	var _jukebox_container2 = _interopRequireDefault(_jukebox_container);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	exports.default = function () {
-	  return _react2.default.createElement(_synth_container2.default, null);
+	  return _react2.default.createElement(
+	    'div',
+	    null,
+	    _react2.default.createElement(_synth_container2.default, null),
+	    _react2.default.createElement(_recorder_container2.default, null),
+	    _react2.default.createElement(_jukebox_container2.default, null)
+	  );
 	};
 
 /***/ },
@@ -23272,11 +23312,14 @@
 	
 	var _note_actions = __webpack_require__(190);
 	
+	var _tracks_actions = __webpack_require__(209);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var mapStateToProps = function mapStateToProps(state) {
 	  return {
-	    notes: state.notes
+	    notes: state.notes,
+	    isRecording: state.isRecording
 	  };
 	};
 	
@@ -23287,6 +23330,9 @@
 	    },
 	    keyReleased: function keyReleased(key) {
 	      return dispatch((0, _note_actions.keyReleased)(key));
+	    },
+	    addNotes: function addNotes(notes) {
+	      return dispatch((0, _tracks_actions.addNotes)(notes));
 	    }
 	  };
 	};
@@ -23373,12 +23419,18 @@
 	    value: function onKeyDown(e) {
 	      var letter = String.fromCharCode(e.keyCode).toLowerCase();
 	      this.props.keyPressed(letter);
+	      if (this.props.isRecording) {
+	        this.props.addNotes(this.props.notes);
+	      }
 	    }
 	  }, {
 	    key: 'onKeyUp',
 	    value: function onKeyUp(e) {
 	      var letter = String.fromCharCode(e.keyCode).toLowerCase();
 	      this.props.keyReleased(letter);
+	      if (this.props.isRecording) {
+	        this.props.addNotes(this.props.notes);
+	      }
 	    }
 	  }, {
 	    key: 'render',
@@ -33514,6 +33566,391 @@
 	};
 	
 	exports.default = NoteKey;
+
+/***/ },
+/* 207 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _tracks_actions = __webpack_require__(209);
+	
+	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+	
+	function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+	
+	var currentTrackId = 0;
+	var currentTrack = void 0,
+	    timeSlice = void 0,
+	    newRoll = void 0;
+	var tracks = function tracks() {
+	  var state = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+	  var action = arguments[1];
+	
+	  switch (action.type) {
+	    case _tracks_actions.TracksConstants.START_RECORDING:
+	      currentTrackId++;
+	      return Object.assign({}, state, _defineProperty({}, currentTrackId, {
+	        id: currentTrackId,
+	        name: 'Track ' + currentTrackId,
+	        roll: [],
+	        timeStart: action.timeNow
+	      }));
+	    case _tracks_actions.TracksConstants.STOP_RECORDING:
+	      currentTrack = Object.assign({}, state[currentTrackId]);
+	      timeSlice = action.timeNow - currentTrack.timeStart;
+	      newRoll = [].concat(_toConsumableArray(currentTrack.roll), [{ notes: [], timeSlice: timeSlice }]);
+	      currentTrack.roll = newRoll;
+	      return Object.assign({}, state, _defineProperty({}, currentTrackId, currentTrack));
+	    case _tracks_actions.TracksConstants.ADD_NOTES:
+	      currentTrack = Object.assign({}, state[currentTrackId]);
+	      timeSlice = action.timeNow - currentTrack.timeStart;
+	      newRoll = [].concat(_toConsumableArray(currentTrack.roll), [{ notes: action.notes, timeSlice: timeSlice }]);
+	      currentTrack.roll = newRoll;
+	      return Object.assign({}, state, _defineProperty({}, currentTrackId, currentTrack));
+	    default:
+	      return state;
+	  }
+	};
+	
+	exports.default = tracks;
+
+/***/ },
+/* 208 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _tracks_actions = __webpack_require__(209);
+	
+	var recording = function recording() {
+	  var state = arguments.length <= 0 || arguments[0] === undefined ? false : arguments[0];
+	  var action = arguments[1];
+	
+	  switch (action.type) {
+	    case _tracks_actions.TracksConstants.START_RECORDING:
+	      return true;
+	    case _tracks_actions.TracksConstants.STOP_RECORDING:
+	      return false;
+	    default:
+	      return state;
+	  }
+	};
+	
+	exports.default = recording;
+
+/***/ },
+/* 209 */
+/***/ function(module, exports) {
+
+	"use strict";
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	var TracksConstants = exports.TracksConstants = {
+	  START_RECORDING: "START_RECORDING",
+	  STOP_RECORDING: "STOP_RECORDING",
+	  ADD_NOTES: "ADD_NOTES"
+	};
+	
+	var startRecording = exports.startRecording = function startRecording() {
+	  return {
+	    type: TracksConstants.START_RECORDING,
+	    timeNow: new Date()
+	  };
+	};
+	
+	var stopRecording = exports.stopRecording = function stopRecording() {
+	  return {
+	    type: TracksConstants.STOP_RECORDING,
+	    timeNow: new Date()
+	  };
+	};
+	
+	var addNotes = exports.addNotes = function addNotes(notes) {
+	  return {
+	    type: TracksConstants.ADD_NOTES,
+	    timeNow: new Date(),
+	    notes: notes
+	  };
+	};
+
+/***/ },
+/* 210 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _reactRedux = __webpack_require__(194);
+	
+	var _recorder = __webpack_require__(211);
+	
+	var _recorder2 = _interopRequireDefault(_recorder);
+	
+	var _tracks_actions = __webpack_require__(209);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var mapStateToProps = function mapStateToProps(state) {
+	  return {
+	    isRecording: state.isRecording,
+	    isPlaying: state.isPlaying,
+	    tracks: state.tracks
+	  };
+	};
+	
+	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
+	  return {
+	    stopRecording: function stopRecording() {
+	      return dispatch((0, _tracks_actions.stopRecording)());
+	    },
+	    startRecording: function startRecording() {
+	      return dispatch((0, _tracks_actions.startRecording)());
+	    }
+	  };
+	};
+	
+	exports.default = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_recorder2.default);
+
+/***/ },
+/* 211 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _react = __webpack_require__(1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var Recorder = function Recorder(_ref) {
+	  var isRecording = _ref.isRecording;
+	  var tracks = _ref.tracks;
+	  var stopRecording = _ref.stopRecording;
+	  var startRecording = _ref.startRecording;
+	  var isPlaying = _ref.isPlaying;
+	  return _react2.default.createElement(
+	    'div',
+	    null,
+	    _react2.default.createElement(
+	      'button',
+	      { onClick: startRecording, disabled: isRecording || isPlaying },
+	      'Start'
+	    ),
+	    _react2.default.createElement(
+	      'button',
+	      { onClick: stopRecording, disabled: !isRecording || isPlaying },
+	      'Stop'
+	    )
+	  );
+	};
+	
+	exports.default = Recorder;
+
+/***/ },
+/* 212 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _playing_actions = __webpack_require__(213);
+	
+	var isPlayingReducer = function isPlayingReducer() {
+	  var state = arguments.length <= 0 || arguments[0] === undefined ? false : arguments[0];
+	  var action = arguments[1];
+	
+	  switch (action.type) {
+	    case _playing_actions.PlayingConstants.START_PLAYING:
+	      return true;
+	
+	    case _playing_actions.PlayingConstants.STOP_PLAYING:
+	      return false;
+	
+	    default:
+	      return state;
+	
+	  }
+	};
+	
+	exports.default = isPlayingReducer;
+
+/***/ },
+/* 213 */
+/***/ function(module, exports) {
+
+	"use strict";
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	var PlayingConstants = exports.PlayingConstants = {
+	  START_PLAYING: "START_PLAYING",
+	  STOP_PLAYING: "STOP_PLAYING"
+	};
+	
+	var startPlaying = exports.startPlaying = function startPlaying() {
+	  return {
+	    type: PlayingConstants.START_PLAYING
+	  };
+	};
+	
+	var stopPlaying = exports.stopPlaying = function stopPlaying() {
+	  return {
+	    type: PlayingConstants.STOP_PLAYING
+	  };
+	};
+
+/***/ },
+/* 214 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _reactRedux = __webpack_require__(194);
+	
+	var _note_actions = __webpack_require__(190);
+	
+	var _playing_actions = __webpack_require__(213);
+	
+	var _jukebox = __webpack_require__(215);
+	
+	var _jukebox2 = _interopRequireDefault(_jukebox);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var mapStateToProps = function mapStateToProps(state) {
+	  return {
+	    tracks: state.tracks,
+	    isPlaying: state.isPlaying,
+	    isRecording: state.isRecording
+	  };
+	};
+	
+	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
+	  return {
+	    onPlay: function onPlay(track) {
+	      return function (e) {
+	        dispatch((0, _playing_actions.startPlaying)());
+	        var playbackStartTime = Date.now();
+	        var currNote = 0;
+	        var timeElapsed = void 0;
+	        var interval = setInterval(function () {
+	          if (currNote < track.roll.length) {
+	            if (Date.now() - playbackStartTime > track.roll[currNote].timeSlice) {
+	              dispatch((0, _note_actions.groupUpdate)(track.roll[currNote].notes));
+	              currNote++;
+	            }
+	          } else {
+	            clearInterval(interval);
+	            dispatch((0, _playing_actions.stopPlaying)());
+	          }
+	        }, 10);
+	      };
+	    }
+	
+	    // startPlaying: ()=>dispatch(startPlaying()),
+	    // stopPlaying: ()=>dispatch(stopPlaying())
+	  };
+	};
+	
+	exports.default = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_jukebox2.default);
+
+/***/ },
+/* 215 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _react = __webpack_require__(1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _track = __webpack_require__(216);
+	
+	var _track2 = _interopRequireDefault(_track);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var jukebox = function jukebox(_ref) {
+	  var onPlay = _ref.onPlay;
+	  var tracks = _ref.tracks;
+	  var isPlaying = _ref.isPlaying;
+	  var isRecording = _ref.isRecording;
+	  return _react2.default.createElement(
+	    'div',
+	    null,
+	    Object.keys(tracks).map(function (el) {
+	      return _react2.default.createElement(_track2.default, { key: tracks[el].name, track: tracks[el], onPlay: onPlay, isPlaying: isPlaying, isRecording: isRecording });
+	    })
+	  );
+	};
+	
+	exports.default = jukebox;
+
+/***/ },
+/* 216 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _react = __webpack_require__(1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var Track = function Track(_ref) {
+	  var isRecording = _ref.isRecording;
+	  var track = _ref.track;
+	  var isPlaying = _ref.isPlaying;
+	  var onPlay = _ref.onPlay;
+	  return _react2.default.createElement(
+	    'div',
+	    null,
+	    track.name,
+	    _react2.default.createElement(
+	      'button',
+	      { disabled: isRecording || isPlaying, onClick: onPlay(track) },
+	      'Play'
+	    )
+	  );
+	};
+	
+	exports.default = Track;
 
 /***/ }
 /******/ ]);

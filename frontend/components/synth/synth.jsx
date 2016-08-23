@@ -32,11 +32,17 @@ class Synth extends React.Component {
   onKeyDown(e){
     let letter = String.fromCharCode(e.keyCode).toLowerCase();
     this.props.keyPressed(letter);
+    if (this.props.isRecording) {
+      this.props.addNotes(this.props.notes);
+    }
   }
 
   onKeyUp(e){
     let letter = String.fromCharCode(e.keyCode).toLowerCase();
     this.props.keyReleased(letter);
+    if (this.props.isRecording) {
+      this.props.addNotes(this.props.notes);
+    }
   }
 
   render() {

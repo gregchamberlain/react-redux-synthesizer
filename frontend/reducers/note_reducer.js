@@ -18,6 +18,9 @@ const NotesReducer = (state = [], action) => {
       }
       return state;
 
+    case NoteConstants.GROUP_UPDATE:
+      return action.notes;
+
     default:
       return state;
   }

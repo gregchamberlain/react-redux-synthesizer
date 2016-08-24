@@ -26,13 +26,20 @@ const NotesReducer = (state = [], action) => {
   }
 };
 
-const validKeys = ["a","s","d","f","g"];
+const validKeys = ["a"];
 const keyMap = {
-  a: "C5",
-  s: "D5",
-  d: "E5",
-  f: "F5",
-  g: "G5",
+  a: "bell",
 };
+//
+// const validKeys = ["a","s","d","f","g","h","j"];
+// const keyMap = {
+//   a: "C5",
+//   s: "D5",
+//   d: "E5",
+//   f: "F5",
+//   g: "G5",
+//   h: "A5",
+//   j: "B5",
+// };
 
 export default NotesReducer;

@@ -56,7 +56,7 @@ class Synth extends React.Component {
     ));
 
     return(
-      <div>{notes}</div>
+      <div className="synth">{notes}</div>
     );
   }
 

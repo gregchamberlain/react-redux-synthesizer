@@ -21456,23 +21456,23 @@
 	};
 	
 	var Note = function () {
-	  function Note(freq) {
+	  function Note(file) {
 	    _classCallCheck(this, Note);
 	
-	    this.oscillatorNode = createOscillator(freq);
-	    this.gainNode = createGainNode();
-	    this.oscillatorNode.connect(this.gainNode);
+	    this.audio = new Audio(file);
+	    // this.gainNode = createGainNode();
+	    // this.oscillatorNode.connect(this.gainNode);
 	  }
 	
 	  _createClass(Note, [{
 	    key: "start",
 	    value: function start() {
-	      this.gainNode.gain.value = 0.3;
+	      this.audio.play();
 	    }
 	  }, {
 	    key: "stop",
 	    value: function stop() {
-	      this.gainNode.gain.value = 0;
+	      // this.gainNode.gain.value = 0;
 	    }
 	  }]);
 	
@@ -21480,6 +21480,43 @@
 	}();
 	
 	exports.default = Note;
+	
+	// const ctx = new (window.AudioContext || window.webkitAudioContext)();
+	//
+	// const createOscillator = (freq) => {
+	//   const osc = ctx.createOscillator();
+	//   osc.type = "sine";
+	//   osc.frequency.value = freq;
+	//   osc.detune.value = 0;
+	//   osc.start(ctx.currentTime);
+	//   return osc;
+	// };
+	//
+	// const createGainNode = () => {
+	//   const gainNode = ctx.createGain();
+	//   gainNode.gain.value = 0;
+	//   gainNode.connect(ctx.destination);
+	//   return gainNode;
+	// };
+	//
+	// class Note {
+	//   constructor(freq) {
+	//     this.oscillatorNode = createOscillator(freq);
+	//     this.gainNode = createGainNode();
+	//     this.oscillatorNode.connect(this.gainNode);
+	//   }
+	//
+	//   start() {
+	//     this.gainNode.gain.value = 0.3;
+	//   }
+	//
+	//   stop() {
+	//     this.gainNode.gain.value = 0;
+	//   }
+	// }
+	//
+	//
+	// export default Note;
 
 /***/ },
 /* 173 */
@@ -22439,14 +22476,21 @@
 	  }
 	};
 	
-	var validKeys = ["a", "s", "d", "f", "g"];
+	var validKeys = ["a"];
 	var keyMap = {
-	  a: "C5",
-	  s: "D5",
-	  d: "E5",
-	  f: "F5",
-	  g: "G5"
+	  a: "bell"
 	};
+	//
+	// const validKeys = ["a","s","d","f","g","h","j"];
+	// const keyMap = {
+	//   a: "C5",
+	//   s: "D5",
+	//   d: "E5",
+	//   f: "F5",
+	//   g: "G5",
+	//   h: "A5",
+	//   j: "B5",
+	// };
 	
 	exports.default = NotesReducer;
 
@@ -22503,12 +22547,18 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
+	// export default {
+	//   C5: 523.25,
+	//   D5: 587.33,
+	//   E5: 659.25,
+	//   F5: 698.46,
+	//   G5: 783.99,
+	//   A5: 880.00,
+	//   B5: 987.77,
+	// };
+	
 	exports.default = {
-	  C5: 523.25,
-	  D5: 587.33,
-	  E5: 659.25,
-	  F5: 698.46,
-	  G5: 783.99
+	  bell: "./bell.mp3"
 	};
 
 /***/ },
@@ -23448,7 +23498,7 @@
 	
 	      return _react2.default.createElement(
 	        'div',
-	        null,
+	        { className: 'synth' },
 	        notes
 	      );
 	    }
@@ -33560,7 +33610,7 @@
 	  var active = _ref.active;
 	  return _react2.default.createElement(
 	    "div",
-	    { style: { color: active ? "red" : "black", fontWeight: active ? "bold" : "normal" } },
+	    { className: "note-key" + (active ? " active" : "") },
 	    note
 	  );
 	};
@@ -33729,7 +33779,7 @@
 /* 211 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	"use strict";
 	
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
@@ -33748,17 +33798,17 @@
 	  var startRecording = _ref.startRecording;
 	  var isPlaying = _ref.isPlaying;
 	  return _react2.default.createElement(
-	    'div',
-	    null,
+	    "div",
+	    { className: "recorder" },
 	    _react2.default.createElement(
-	      'button',
+	      "button",
 	      { onClick: startRecording, disabled: isRecording || isPlaying },
-	      'Start'
+	      "Start"
 	    ),
 	    _react2.default.createElement(
-	      'button',
+	      "button",
 	      { onClick: stopRecording, disabled: !isRecording || isPlaying },
-	      'Stop'
+	      "Stop"
 	    )
 	  );
 	};
@@ -33909,6 +33959,11 @@
 	  return _react2.default.createElement(
 	    'div',
 	    null,
+	    _react2.default.createElement(
+	      'h3',
+	      null,
+	      'Recorded Tracks'
+	    ),
 	    Object.keys(tracks).map(function (el) {
 	      return _react2.default.createElement(_track2.default, { key: tracks[el].name, track: tracks[el], onPlay: onPlay, isPlaying: isPlaying, isRecording: isRecording });
 	    })
